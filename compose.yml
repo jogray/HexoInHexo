@@ -1,0 +1,15 @@
+name: hexo
+services:
+  blog:
+    build:
+      context: .
+    # command: ["tail", "-f", "/dev/null"]
+
+    ports:
+      - "40000:4000"
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
