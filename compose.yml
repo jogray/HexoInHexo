@@ -3,8 +3,11 @@ services:
   blog:
     build:
       context: .
+      target: builder
     # command: ["tail", "-f", "/dev/null"]
 
+    volumes:
+      - ./:/myapp
     ports:
       - "40000:4000"
     networks:

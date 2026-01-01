@@ -1,0 +1,164 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install Hexo CLI
+        run: npm install hexo-cli -g
+      
+      - name: Initialize Hexo Blog
+        run: |
+          hexo init blog
+          cd blog
+          npm install
+      
+      - name: Configure Hexo for Chinese
+        working-directory: ./blog
+        run: |
+          sed -i "s/language: en/language: zh-CN/" _config.yml
+          sed -i "s/timezone: ''/timezone: Asia\/Shanghai/" _config.yml
+          sed -i "s/title: Hexo/title: Hexo 中文教程/" _config.yml
+          sed -i "s/subtitle: ''/subtitle: 从入门到精通/" _config.yml
+          sed -i "s/description: ''/description: 详细的 Hexo 博客搭建教程，包括安装、配置、主题、部署、SEO 优化等/" _config.yml
+          sed -i "s/author: John Doe/author: Hexo in Hexo/" _config.yml
+      
+      - name: Install and Configure Theme
+        working-directory: ./blog
+        run: |
+          git clone --depth 1 https://github.com/adisaktijrs/hexo-theme-minimalist themes/minimalist
+          sed -i "s/theme: landscape/theme: minimalist/" _config.yml
+          mkdir -p themes/minimalist/source/css
+          cat > themes/minimalist/_config.yml <<'EOF'
+          # Minimalist 主题配置
+          menu:
+            Home: /
+            Archives: /archives/
+            
+          # 启用目录
+          toc: true
+
+          # 代码高亮
+          highlight:
+            enable: true
+            
+          # 关闭侧边栏
+          sidebar: false
+          EOF
+      
+      - name: Remove Default Posts
+        working-directory: ./blog
+        run: rm -f source/_posts/hello-world.md
+      
+      - name: Process Documentation Files
+        working-directory: ./blog
+        run: |
+          # Function to add Front-matter
+          add_frontmatter() {
+              local input_file="$1"
+              local output_file="$2"
+              local title="$3"
+              
+              if [ -z "$title" ]; then
+                  title=$(grep -m 1 '^#' "$input_file" | sed 's/^#* *//')
+              fi
+              
+              {
+                  echo "---"
+                  echo "title: $title"
+                  echo "date: $(date -u +%Y-%m-%d\ %H:%M:%S)"
+                  echo "updated: $(date -u +%Y-%m-%d\ %H:%M:%S)"
+                  echo "---"
+                  echo ""
+                  sed '1{/^#/d;}' "$input_file"
+              } > "$output_file"
+          }
+          
+          # Process QUICKSTART
+          add_frontmatter "../QUICKSTART.md" "source/_posts/00-quickstart.md" "Hexo 快速使用教程"
+          
+          # Process manual files
+          for file in ../manual/*.md; do
+              [ -e "$file" ] || continue
+              filename=$(basename "$file")
+              title=$(grep -m 1 '^#' "$file" | sed 's/^#* *//')
+              add_frontmatter "$file" "source/_posts/$filename" "$title"
+          done
+      
+      - name: Generate Static Site
+        working-directory: ./blog
+        run: hexo generate
+      
+      - name: Create Release Archive
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: ./blog
+        run: |
+          tar -czf hexo-site.tar.gz -C public .
+          zip -r hexo-site.zip public/
+      
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./blog/hexo-site.tar.gz
+            ./blog/hexo-site.zip
+          body: |
+            ## Hexo 中文教程静态站点
+            
+            本 Release 包含完整的静态网站文件。
+            
+            **使用方法**：
+            - 下载 `hexo-site.tar.gz` 或 `hexo-site.zip`
+            - 解压到 Web 服务器目录
+            - 或使用 `npx http-server` 本地预览
+            
+            **在线访问**：${{ github.server_url }}/${{ github.repository }}/pages
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./blog/public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
