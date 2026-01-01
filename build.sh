@@ -2,7 +2,14 @@
 set -euo pipefail
 
 # Prepare toolchain and Hexo CLI
-apk add --no-cache git
+# Check if running in Alpine (Docker) or Ubuntu (GitHub Actions)
+if command -v apk >/dev/null 2>&1; then
+    apk add --no-cache git
+else
+    apt-get update
+    apt-get install -y git
+fi
+
 npm install hexo-cli -g
 
 # Bootstrap Hexo project
