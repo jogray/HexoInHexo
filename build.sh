@@ -6,8 +6,8 @@ set -euo pipefail
 if command -v apk >/dev/null 2>&1; then
     apk add --no-cache git
 else
-    apt-get update
-    apt-get install -y git
+    sudo apt-get update
+    sudo apt-get install -y git
 fi
 
 npm install hexo-cli -g
