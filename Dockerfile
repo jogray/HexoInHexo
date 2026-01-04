@@ -1,6 +1,9 @@
 FROM node:24-alpine AS builder
 WORKDIR /app
 
+# Install bash for build script compatibility
+RUN apk add --no-cache bash
+
 # 先复制构建脚本（只有它变化时才重新执行后续步骤）
 COPY build.sh ./
 RUN chmod +x ./build.sh

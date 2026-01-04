@@ -28,6 +28,9 @@ sed -i "s/subtitle: ''/subtitle: 从入门到精通/" _config.yml
 sed -i "s/description: ''/description: 详细的 Hexo 博客搭建教程，包括安装、配置、主题、部署、SEO 优化等/" _config.yml
 sed -i "s/author: John Doe/author: Hexo in Hexo/" _config.yml
 
+# Set root path for GitHub Pages (repository name)
+sed -i "s|root: /|root: /HexoInHexo/|" _config.yml
+
 # Add quickstart and manuals as posts
 # Function to add Front-matter to a file
 add_frontmatter() {
