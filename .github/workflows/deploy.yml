@@ -5,7 +5,7 @@ on:
     branches:
       - master
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -20,30 +20,31 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-      
-      - name: Make build script executable
-        run: chmod +x ./build.sh
-      
-      - name: Run build script
+          node-version: "24"
+      - name: set file executable permissions
+        run: chmod +x ./build.sh && chmod +x ./require.sh
+      - name: set up hexo environment
+        run: ./require.sh
+
+      - name: generate static files
         run: ./build.sh
-      
+
       - name: Create Release Archive
         if: startsWith(github.ref, 'refs/tags/')
         working-directory: ./blog
         run: |
           tar -czf hexo-site.tar.gz -C public .
           zip -r hexo-site.zip public/
-      
-      - name: Create GitHub Release
+
+      - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
@@ -52,20 +53,20 @@ jobs:
             ./blog/hexo-site.zip
           body: |
             ## Hexo 中文教程静态站点
-            
+
             本 Release 包含完整的静态网站文件。
-            
+
             **使用方法**：
             - 下载 `hexo-site.tar.gz` 或 `hexo-site.zip`
             - 解压到 Web 服务器目录
             - 或使用 `npx http-server` 本地预览
-            
+
             **在线访问**：${{ github.server_url }}/${{ github.repository }}/pages
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:

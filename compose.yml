@@ -12,6 +12,14 @@ services:
       - "40000:4000"
     networks:
       - default
+  release:
+    build:
+      context: .
+      target: release
+    ports:
+      - "40001:4000"
+    networks:
+      - default
 
 networks:
   default:

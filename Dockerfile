@@ -2,18 +2,21 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Install bash for build script compatibility
-RUN apk add --no-cache bash
+# 安装 bash 以兼容构建脚本
+RUN apk add --no-cache bash git
+
+COPY require.sh ./
+RUN chmod +x ./require.sh && ./require.sh
 
 # 先复制构建脚本（只有它变化时才重新执行后续步骤）
 COPY build.sh ./
-RUN chmod +x ./build.sh
 
 # 复制文档文件（只有文档变化时才影响这一层）
 COPY QUICKSTART.md ./
 COPY manual/ ./manual/
 
 # 执行构建（会被缓存，除非上面的文件变了）
-RUN ./build.sh
+RUN chmod +x ./build.sh && ./build.sh
 
 WORKDIR /app/blog
 CMD ["hexo", "server", "-i", "0.0.0.0", "-p", "4000"]
