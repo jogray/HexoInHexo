@@ -11,6 +11,14 @@ sed -i "s/subtitle: ''/subtitle: 从入门到精通/" _config.yml
 sed -i "s/description: ''/description: 详细的 Hexo 博客搭建教程，包括安装、配置、主题、部署、SEO 优化等/" _config.yml
 sed -i "s/author: John Doe/author: Hexo in Hexo/" _config.yml
 
+# Switch theme to Butterfly
+# 切换为 Butterfly 主题
+if grep -q '^theme:' _config.yml; then
+    sed -i "s|^theme:.*|theme: butterfly|" _config.yml
+else
+    printf 'theme: butterfly\n' >> _config.yml
+fi
+
 # Configure URL/root for local and GitHub Pages
 # 为本地与 GitHub Pages 分别配置 URL 与根路径
 if [ -n "${GITHUB_REPOSITORY:-}" ]; then

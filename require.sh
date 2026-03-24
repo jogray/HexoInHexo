@@ -25,6 +25,10 @@ hexo init blog
 cd blog
 npm install
 
+# Install Butterfly theme and required renderers
+# 安装 Butterfly 主题及其渲染依赖
+npm install hexo-theme-butterfly hexo-renderer-pug hexo-renderer-stylus
+
 # Drop default hello-world to keep generated site clean
 # 删除默认 hello-world 文章，保持站点内容干净
 rm -f source/_posts/hello-world.md
