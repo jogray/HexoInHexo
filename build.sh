@@ -11,9 +11,31 @@ sed -i "s/subtitle: ''/subtitle: 从入门到精通/" _config.yml
 sed -i "s/description: ''/description: 详细的 Hexo 博客搭建教程，包括安装、配置、主题、部署、SEO 优化等/" _config.yml
 sed -i "s/author: John Doe/author: Hexo in Hexo/" _config.yml
 
-# Set root path for GitHub Pages (repository name)
-# 设置 GitHub Pages 的根路径（仓库名子路径）
-sed -i "s|root: /|root: /HexoInHexo/|" _config.yml
+# Configure URL/root for local and GitHub Pages
+# 为本地与 GitHub Pages 分别配置 URL 与根路径
+if [ -n "${GITHUB_REPOSITORY:-}" ]; then
+    repo_owner="${GITHUB_REPOSITORY%%/*}"
+    repo_name="${GITHUB_REPOSITORY##*/}"
+    site_url="https://${repo_owner}.github.io/${repo_name}"
+    site_root="/${repo_name}/"
+else
+    site_url="http://localhost:4000"
+    site_root="/"
+fi
+
+# Hexo versions may not include `root` in default _config.yml.
+# Newer Hexo 默认配置可能不包含 root 字段，需要在缺失时追加。
+if grep -q '^url:' _config.yml; then
+    sed -i "s|^url:.*|url: ${site_url}|" _config.yml
+else
+    printf 'url: %s\n' "${site_url}" >> _config.yml
+fi
+
+if grep -q '^root:' _config.yml; then
+    sed -i "s|^root:.*|root: ${site_root}|" _config.yml
+else
+    sed -i "/^url:/a root: ${site_root}" _config.yml
+fi
 
 # Add quickstart and manuals as posts
 # 将 QUICKSTART 和 manual 目录内容作为文章导入
