@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apk add --no-cache bash git
 
 COPY require.sh ./
-RUN chmod +x ./require.sh && ./require.sh
+RUN --mount=type=cache,sharing=private,target=/root/.npm chmod +x ./require.sh && ./require.sh
 
 # 先复制构建脚本（只有它变化时才重新执行后续步骤）
 COPY build.sh ./
@@ -16,7 +16,7 @@ COPY QUICKSTART.md ./
 COPY manual/ ./manual/
 
 # 执行构建（会被缓存，除非上面的文件变了）
-RUN chmod +x ./build.sh && ./build.sh
+RUN --mount=type=cache,sharing=private,target=/root/.npm chmod +x ./build.sh && ./build.sh
 
 WORKDIR /app/blog
 CMD ["hexo", "server", "-i", "0.0.0.0", "-p", "4000"]
