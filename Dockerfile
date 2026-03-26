@@ -12,8 +12,7 @@ RUN --mount=type=cache,sharing=private,target=/root/.npm chmod +x ./require.sh &
 COPY build.sh ./
 
 # 复制文档文件（只有文档变化时才影响这一层）
-COPY QUICKSTART.md ./
-COPY manual/ ./manual/
+COPY . ./
 
 # Allow workflow-provided GitHub context inside build stage.
 ARG GITHUB_REPOSITORY=
