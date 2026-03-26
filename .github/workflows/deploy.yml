@@ -46,7 +46,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/hexoinhexo-release
           tags: |
@@ -55,7 +55,7 @@ jobs:
             type=ref,event=tag
 
       - name: Export static files for GitHub Pages
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -69,7 +69,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Export static files for release package
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -82,7 +82,7 @@ jobs:
           cache-from: type=gha
 
       - name: Push release container image to GHCR
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
