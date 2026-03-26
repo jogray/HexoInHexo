@@ -12,6 +12,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  packages: write
 
 concurrency:
   group: "pages"
@@ -25,39 +26,93 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-      - name: set file executable permissions
-        run: chmod +x ./build.sh && chmod +x ./require.sh
-      - name: set up hexo environment
-        run: ./require.sh
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
 
-      - name: generate static files
-        run: ./build.sh
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 去除dockerignore中对.git的忽略，以便在构建阶段获取Git信息
+      - name: Prepare Build Context
+        run: |
+          if grep -q '^\.git$' .dockerignore; then
+            echo "Removing .git from .dockerignore"
+            sed -i '/^\.git$/d' .dockerignore
+          fi
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/hexoinhexo-release
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=long
+            type=ref,event=tag
+
+      - name: Export static files for GitHub Pages
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: final
+          push: false
+          build-args: |
+            GITHUB_REPOSITORY=${{ github.repository }}
+            GITHUB_ACTOR=${{ github.actor }}
+          outputs: type=local,dest=./dist-pages
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export static files for release package
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: final
+          push: false
+          build-args: |
+            GITHUB_REPOSITORY=
+            GITHUB_ACTOR=${{ github.actor }}
+          outputs: type=local,dest=./static-release
+          cache-from: type=gha
+
+      - name: Push release container image to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: release
+          push: true
+          build-args: |
+            GITHUB_REPOSITORY=
+            GITHUB_ACTOR=${{ github.actor }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
 
       - name: Create Release Archive
         if: startsWith(github.ref, 'refs/tags/')
-        working-directory: ./blog
         run: |
-          tar -czf hexo-site.tar.gz -C public .
-          zip -r hexo-site.zip public/
+          zip -r hexo-site.zip static-release
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./blog/hexo-site.tar.gz
-            ./blog/hexo-site.zip
+            ./hexo-site.zip
           body: |
             ## Hexo 中文教程静态站点
 
             本 Release 包含完整的静态网站文件。
 
             **使用方法**：
-            - 下载 `hexo-site.tar.gz` 或 `hexo-site.zip`
+            - 下载 `hexo-site.zip`
             - 解压到 Web 服务器目录
             - 或使用 `npx http-server` 本地预览
 
@@ -70,7 +125,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./blog/public
+          path: ./dist-pages
 
   deploy:
     environment:
@@ -84,4 +139,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4.0.4
+        uses: actions/deploy-pages@v4.0.5

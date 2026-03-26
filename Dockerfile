@@ -15,6 +15,12 @@ COPY build.sh ./
 COPY QUICKSTART.md ./
 COPY manual/ ./manual/
 
+# Allow workflow-provided GitHub context inside build stage.
+ARG GITHUB_REPOSITORY=
+ARG GITHUB_ACTOR=
+ENV GITHUB_REPOSITORY=$GITHUB_REPOSITORY
+ENV GITHUB_ACTOR=$GITHUB_ACTOR
+
 # 执行构建（会被缓存，除非上面的文件变了）
 RUN --mount=type=cache,sharing=private,target=/root/.npm chmod +x ./build.sh && ./build.sh
 
@@ -27,3 +33,6 @@ WORKDIR /app
 COPY --from=builder /app/blog/public ./public
 CMD ["httpd", "-f", "-p", "4000", "-h", "/app/public"]
 EXPOSE 4000
+
+FROM scratch AS final
+COPY --from=release /app/public /
